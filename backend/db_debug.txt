@@ -1,0 +1,8 @@
+DATABASE_URL: postgresql+asyncpg://postgres:****@localhost:5433/theatre
+DB_USER: postgres
+DB_PASSWORD: Yashwanth%40567
+DB_HOST: localhost
+DB_PORT: 5433
+DB_NAME: theatre
+Resolved .env Path: /Users/yashwanth/Desktop/theatre/backend/.env
+.env exists: True
