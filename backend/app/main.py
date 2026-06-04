@@ -16,9 +16,13 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: create tables and seed theatres/user
-    await init_db()
-    async with async_session() as session:
-        await seed_database(session)
+    try:
+        await init_db()
+        async with async_session() as session:
+            await seed_database(session)
+        print("✅ Database initialized and seeded successfully.", flush=True)
+    except Exception as e:
+        print(f"❌ Database initialization failed during startup: {e}", flush=True)
 
     # Kick off the first TMDb sync in the background so movies
     # are ready immediately without blocking the first HTTP request
