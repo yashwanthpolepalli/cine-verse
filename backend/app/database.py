@@ -9,6 +9,12 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 # Build database URL: prefer DATABASE_URL (Render), then individual vars, then sqlite
 _raw_url = os.getenv("DATABASE_URL", "")
 
+db_user = None
+db_password = None
+db_host = None
+db_port = None
+db_name = None
+
 if _raw_url:
     # Render provides postgres:// — asyncpg needs postgresql+asyncpg://
     if _raw_url.startswith("postgres://"):
