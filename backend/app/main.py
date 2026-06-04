@@ -25,18 +25,14 @@ async def lifespan(app: FastAPI):
         print(f"❌ Database initialization failed during startup: {e}", flush=True)
 
     # Kick off the first TMDb sync in the background so movies
-    # are ready immediately without blocking the first HTTP request
-    import asyncio
-    from app.services.tmdb import sync_all_from_api
-
-    async def _startup_sync():
-        try:
-            async with async_session() as s:
-                await sync_all_from_api(s)
-        except Exception as e:
-            print(f"❌  Startup sync failed: {e}", flush=True)
-
-    asyncio.create_task(_startup_sync())
+    # are ready immediately without blocking the first HTTP request.
+    # check_and_sync_movies will schedule the background sync and set the last_sync
+    # timestamp to prevent duplicate concurrent runs.
+    from app.services.tmdb import check_and_sync_movies
+    try:
+        await check_and_sync_movies()
+    except Exception as e:
+        print(f"❌  Startup sync scheduling failed: {e}", flush=True)
 
     yield
     # Shutdown: nothing needed

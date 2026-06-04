@@ -24,6 +24,7 @@ TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 
 _last_sync: Optional[datetime] = None
 SYNC_INTERVAL_SECONDS = 900  # 15 minutes
+_sync_in_progress = False
 
 
 def _map_language(lang_code: str) -> str:
@@ -240,27 +241,35 @@ async def sync_all_from_api(db: AsyncSession) -> int:
         return synced_movies
 
 
-async def check_and_sync_movies(db: AsyncSession):
+async def check_and_sync_movies(db: Optional[AsyncSession] = None):
     """
     Triggers a TMDb sync if needed (runs in a background asyncio task).
     """
-    global _last_sync
+    global _last_sync, _sync_in_progress
+    if _sync_in_progress:
+        return
+
     now = datetime.now()
     if _last_sync is None or (now - _last_sync).total_seconds() > SYNC_INTERVAL_SECONDS:
-        print(f"🔄  TMDb: Scheduling background sync (last: {_last_sync})", flush=True)
+        _sync_in_progress = True
         _last_sync = now  # prevent double-trigger
+        print(f"🔄  TMDb: Scheduling background sync (last: {_last_sync})", flush=True)
 
         import asyncio
         from app.database import async_session as _make_session
 
         async def _background_sync():
+            global _last_sync, _sync_in_progress
             try:
                 async with _make_session() as bg_session:
                     await sync_all_from_api(bg_session)
             except Exception as e:
-                global _last_sync
                 print(f"❌  TMDb: Background sync failed — {e}", flush=True)
                 import traceback; traceback.print_exc()
-                _last_sync = None  # allow retry on next request
+                # On failure, set last_sync to a 60-second cooldown from now
+                # so we don't spam the DB/API on every subsequent request.
+                _last_sync = datetime.now() - timedelta(seconds=SYNC_INTERVAL_SECONDS - 60)
+            finally:
+                _sync_in_progress = False
 
         asyncio.create_task(_background_sync())
