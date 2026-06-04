@@ -1,9 +1,15 @@
 const getApiBase = () => {
+  // In production, VITE_API_URL is baked in at build time (e.g. https://cine-verse-xxxx.onrender.com)
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && envUrl !== "http://localhost:8000") {
+    return envUrl.replace(/\/+$/, "") + "/api";
+  }
+  // Local dev: auto-detect hostname so it works on LAN too
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     return `${window.location.protocol}//${hostname}:8000/api`;
   }
-  return (import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api";
+  return "http://localhost:8000/api";
 };
 const API_BASE = getApiBase();
 

@@ -6,17 +6,28 @@ from pathlib import Path
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
-# Build postgres URL if variables exist, otherwise default to sqlite
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
-db_host = os.getenv("DB_HOST", "localhost")
-db_port = os.getenv("DB_PORT", "5433")
-db_name = os.getenv("DB_NAME")
+# Build database URL: prefer DATABASE_URL (Render), then individual vars, then sqlite
+_raw_url = os.getenv("DATABASE_URL", "")
 
-if db_user and db_password and db_name:
-    DATABASE_URL = f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+if _raw_url:
+    # Render provides postgres:// — asyncpg needs postgresql+asyncpg://
+    if _raw_url.startswith("postgres://"):
+        DATABASE_URL = _raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif _raw_url.startswith("postgresql://"):
+        DATABASE_URL = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    else:
+        DATABASE_URL = _raw_url
 else:
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./theatre.db")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = os.getenv("DB_PORT", "5433")
+    db_name = os.getenv("DB_NAME")
+
+    if db_user and db_password and db_name:
+        DATABASE_URL = f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    else:
+        DATABASE_URL = "sqlite+aiosqlite:///./theatre.db"
 
 # Print masked database URL
 masked_url = DATABASE_URL
